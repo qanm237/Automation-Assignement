@@ -1,0 +1,64 @@
+
+
+
+Resources:
+  LambdaExecutionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  LambdaSchedule:
+    Type: "AWS::Events::Rule"
+    Properties:
+      Description: >
+        A schedule for the Lambda function..
+      ScheduleExpression: cron(0 10 * * ? *)
+      State: ENABLED
+      Targets:
+        - Arn: !Sub ${snslambda.Arn}
+          Id: LambdaSchedule
+
+  LambdaSchedulePermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Sub ${snslambda.Arn}
+      Principal: 'events.amazonaws.com'
+      SourceArn: !Sub ${snslambda.Arn}
+
+  LambdaFunction:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Description: >
+        Lambda function that returns 'Hello World!'
+      Code:
+        "S3Bucket": "bucketname"
+        "S3Key": "snslambda.zip"
+      Handler: index.lambda_handler
+      MemorySize: 128
+      Role: !Sub ${LambdaExecutionRole.Arn}
+      Runtime: python3.6
+   Resources: 
+    SNSTopic:
+      Type : "AWS::SNS::Topic"
+      Properties: 
+      TopicName : "lambdatopicsns"
+    
+   MySubscription : 
+      DependsOn : "SNSTopic",
+      Type      : "AWS::SNS::Subscription"
+      Properties : 
+       Endpoint : akash.mahale@quantiphi.com
+       Protocol : email
+       TopicArn : !Ref SNSTopic
+  
